@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dashboard_screen.dart';
-// Removed: import '../../services/update_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,12 +14,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false; 
 
-  @override
-  void initState() {
-    super.initState();
-    // Removed: _checkForUpdates();
-  }
-
   // --- VERIFY MACHINE ID BEFORE LOGIN ---
   Future<void> _verifyAndLogin() async {
     final machineId = _controller.text.trim();
@@ -29,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Logic keeps your previous fix: checking 'machines' path
       final ref = FirebaseDatabase.instance.ref('machines').child(machineId);
       final snapshot = await ref.get();
 
@@ -47,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // ❌ INVALID: Show Error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Machine ID '$machineId' not found in database."),
+            content: Text("Machine ID '$machineId' not found."),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -62,50 +54,80 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // Helper widget for Quick Fill Chips
+  Widget _buildHintChip(String machineId) {
+    return ActionChip(
+      label: Text(machineId, style: GoogleFonts.poppins(fontSize: 12, color: Colors.deepPurple)),
+      backgroundColor: Colors.deepPurple.withOpacity(0.05),
+      side: BorderSide(color: Colors.deepPurple.withOpacity(0.2)),
+      onPressed: () {
+        _controller.text = machineId;
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5FA),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(30.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.wine_bar, size: 80, color: Colors.deepPurple),
-              const SizedBox(height: 20),
-              Text(
-                "Kaong Monitor",
-                style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 40),
-              TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  labelText: "Enter Machine ID",
-                  hintText: "e.g., machine_001",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.qr_code),
+        child: SingleChildScrollView( // Added to prevent overflow on smaller screens
+          child: Padding(
+            padding: const EdgeInsets.all(30.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.wine_bar, size: 80, color: Colors.deepPurple),
+                const SizedBox(height: 20),
+                Text(
+                  "Kaong Monitor",
+                  style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 40),
+                
+                TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    labelText: "Enter Machine ID",
+                    hintText: "e.g., machine_001",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.qr_code),
                   ),
-                  onPressed: _isLoading ? null : _verifyAndLogin,
-                  child: _isLoading 
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text("Connect to Machine", style: GoogleFonts.poppins(color: Colors.white)),
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text("Try: machine_001", style: TextStyle(color: Colors.grey)),
-            ],
+                
+                const SizedBox(height: 20),
+                
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _isLoading ? null : _verifyAndLogin,
+                    child: _isLoading 
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text("Connect to Machine", style: GoogleFonts.poppins(color: Colors.white)),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+                
+                // --- RESTORED & UPGRADED HINTS ---
+                Text("Quick Fill:", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8.0,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    _buildHintChip("machine_001"),
+                    _buildHintChip("machine_002"),
+                    _buildHintChip("machine_003"),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
