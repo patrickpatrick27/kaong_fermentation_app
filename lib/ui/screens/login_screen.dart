@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_database/firebase_database.dart'; // Required for verification
+import 'package:firebase_database/firebase_database.dart';
 import 'dashboard_screen.dart';
 import '../../services/update_service.dart';
 
@@ -14,18 +14,31 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _controller = TextEditingController();
   final UpdateService _updateService = UpdateService();
-  bool _isLoading = false; // To show a spinner while checking
+  bool _isLoading = false; 
+
+  // FIX 1: Static flag prevents double prompts if the screen reloads
+  static bool _hasCheckedForUpdate = false; 
 
   @override
   void initState() {
     super.initState();
-    _checkForUpdates();
+    // Only check if we haven't checked yet this session
+    if (!_hasCheckedForUpdate) {
+      _checkForUpdates();
+    }
   }
 
   Future<void> _checkForUpdates() async {
-    final String? downloadUrl = await _updateService.checkForUpdate();
-    if (downloadUrl != null && mounted) {
-      _showUpdateDialog(downloadUrl);
+    // Mark as checked immediately so we don't try again
+    _hasCheckedForUpdate = true;
+
+    try {
+      final String? downloadUrl = await _updateService.checkForUpdate();
+      if (downloadUrl != null && mounted) {
+        _showUpdateDialog(downloadUrl);
+      }
+    } catch (e) {
+      debugPrint("Update check failed: $e");
     }
   }
 
@@ -37,10 +50,14 @@ class _LoginScreenState extends State<LoginScreen> {
         title: const Text("Update Available 🚀"),
         content: const Text("A new version of Kaong Monitor is available."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Later")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx), 
+            child: const Text("Later")
+          ),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
+              // Calls the service to download and install
               _updateService.downloadUpdate(url);
             },
             child: const Text("Update Now"),
@@ -50,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- 🔒 NEW: VERIFY MACHINE ID BEFORE LOGIN ---
+  // --- VERIFY MACHINE ID BEFORE LOGIN ---
   Future<void> _verifyAndLogin() async {
     final machineId = _controller.text.trim();
     if (machineId.isEmpty) return;
@@ -58,8 +75,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Check if this machine exists in the database
-      final ref = FirebaseDatabase.instance.ref('brewing_state').child(machineId);
+      // FIX 2: Changed ref from 'brewing_state' to 'machines' to match your Screenshot
+      final ref = FirebaseDatabase.instance.ref('machines').child(machineId);
       final snapshot = await ref.get();
 
       if (!mounted) return;
@@ -76,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // ❌ INVALID: Show Error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Machine ID '$machineId' not found."),
+            content: Text("Machine ID '$machineId' not found in database."),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -126,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     backgroundColor: Colors.deepPurple,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _isLoading ? null : _verifyAndLogin, // Disable button if loading
+                  onPressed: _isLoading ? null : _verifyAndLogin,
                   child: _isLoading 
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                     : Text("Connect to Machine", style: GoogleFonts.poppins(color: Colors.white)),
