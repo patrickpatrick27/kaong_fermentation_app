@@ -17,6 +17,31 @@
       "api_key": [
         {
           "current_key": "AIzaSyBRq-Dd3RQDOCdhf36T-1E3Bo4ITT5otR0"
+        },
+        {
+          "current_key": "AIzaSyDvDSmBk0lXfVLTllmhBN-mVNrF-BVBiSs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:373482043990:android:18b6250939d254bf3e19f7",
+        "android_client_info": {
+          "package_name": "com.example.kaong_fermentation_app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRq-Dd3RQDOCdhf36T-1E3Bo4ITT5otR0"
+        },
+        {
+          "current_key": "AIzaSyDvDSmBk0lXfVLTllmhBN-mVNrF-BVBiSs"
         }
       ],
       "services": {
