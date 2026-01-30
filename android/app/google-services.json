@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "373482043990",
+    "project_id": "kaong-fermentation-app",
+    "storage_bucket": "kaong-fermentation-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:373482043990:android:d49f95e27cc85d973e19f7",
+        "android_client_info": {
+          "package_name": "com.example.kaong_fermentation_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRq-Dd3RQDOCdhf36T-1E3Bo4ITT5otR0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
