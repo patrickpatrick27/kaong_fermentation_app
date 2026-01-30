@@ -2,7 +2,7 @@ name: kaong_fermentation_app
 description: "An application for the Automated Kaong Wine Fermentation System Design Project."
 publish_to: 'none' 
 
-version: 1.0.17+1
+version: 1.0.18+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -22,13 +22,14 @@ dependencies:
   firebase_database: ^10.4.0
 
   # --- Auto-Update Stack ---
-  http: ^1.2.0               
+  dio: ^5.4.0                # <-- ADDED (For reliable downloading)
+  open_filex: ^4.3.2         # <-- ADDED (For installing the APK)
   package_info_plus: ^8.0.0      
-  flutter_app_installer: ^1.0.2  
   path_provider: ^2.1.2          
   permission_handler: ^11.3.0    
   url_launcher: ^6.3.0
-  version: ^3.0.2 # <--- ADDED: Required for easy version comparison
+  version: ^3.0.2
+  http: ^1.2.0               # Kept in case you use it elsewhere
   
   # --- Visualization ---
   fl_chart: ^0.68.0 

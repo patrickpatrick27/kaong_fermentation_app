@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'dashboard_screen.dart';
-import '../../services/update_service.dart';
+// Removed: import '../../services/update_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,58 +13,12 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _controller = TextEditingController();
-  final UpdateService _updateService = UpdateService();
   bool _isLoading = false; 
-
-  // FIX 1: Static flag prevents double prompts if the screen reloads
-  static bool _hasCheckedForUpdate = false; 
 
   @override
   void initState() {
     super.initState();
-    // Only check if we haven't checked yet this session
-    if (!_hasCheckedForUpdate) {
-      _checkForUpdates();
-    }
-  }
-
-  Future<void> _checkForUpdates() async {
-    // Mark as checked immediately so we don't try again
-    _hasCheckedForUpdate = true;
-
-    try {
-      final String? downloadUrl = await _updateService.checkForUpdate();
-      if (downloadUrl != null && mounted) {
-        _showUpdateDialog(downloadUrl);
-      }
-    } catch (e) {
-      debugPrint("Update check failed: $e");
-    }
-  }
-
-  void _showUpdateDialog(String url) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Update Available 🚀"),
-        content: const Text("A new version of Kaong Monitor is available."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx), 
-            child: const Text("Later")
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              // Calls the service to download and install
-              _updateService.downloadUpdate(url);
-            },
-            child: const Text("Update Now"),
-          )
-        ],
-      ),
-    );
+    // Removed: _checkForUpdates();
   }
 
   // --- VERIFY MACHINE ID BEFORE LOGIN ---
@@ -75,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // FIX 2: Changed ref from 'brewing_state' to 'machines' to match your Screenshot
+      // Logic keeps your previous fix: checking 'machines' path
       final ref = FirebaseDatabase.instance.ref('machines').child(machineId);
       final snapshot = await ref.get();
 
