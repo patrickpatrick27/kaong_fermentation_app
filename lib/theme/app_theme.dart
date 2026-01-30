@@ -46,14 +46,13 @@ class AppTheme {
         centerTitle: true,
       ),
       
-      // FIX IS HERE: We removed 'const' from CardTheme entirely.
-      // Now we can use flexible values like BorderRadius.circular without errors.
-      cardTheme: CardTheme(
+      // FIXED HERE: Changed 'CardTheme' to 'CardThemeData'
+      cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 4,
         shadowColor: Colors.black12, 
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20), // This is now allowed
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );

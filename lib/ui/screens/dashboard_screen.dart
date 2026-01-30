@@ -29,7 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Update Available"),
-        content: const Text("A new version of the Kaong Monitor is available."),
+        content: const Text("A new version of the Kaong Wine Fermentation Monitor is available."),
         actions: [
           TextButton(
             onPressed: () {

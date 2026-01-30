@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "373482043990",
+    "firebase_url": "https://kaong-fermentation-app-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "kaong-fermentation-app",
     "storage_bucket": "kaong-fermentation-app.firebasestorage.app"
   },
