@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -16,7 +19,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17" // Fixed deprecated syntax
     }
 
     defaultConfig {
@@ -32,16 +35,15 @@ android {
     signingConfigs {
         create("release") {
             // 1. Initialize Properties Object
-            val keystoreProperties = java.util.Properties()
+            val keystoreProperties = Properties()
             
             // 2. Look for "key.properties" in the root android folder
             val keystorePropertiesFile = rootProject.file("key.properties")
 
             if (keystorePropertiesFile.exists()) {
                 // --- LOCAL BUILD: Read from key.properties ---
-                keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
                 
-                // Parse the file content
                 storeFile = file(keystoreProperties.getProperty("storeFile"))
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
