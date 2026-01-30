@@ -1,4 +1,3 @@
-// File: lib/models/brewing_state.dart
 class BrewingState {
   final String currentProcess;
   final double temperature;
@@ -6,6 +5,7 @@ class BrewingState {
   final double specificGravity;
   final int startTimestamp;
   final int targetDurationHours;
+  final String timeRemainingLabel; // <--- NEW FIELD
 
   BrewingState({
     required this.currentProcess,
@@ -14,35 +14,41 @@ class BrewingState {
     required this.specificGravity,
     required this.startTimestamp,
     required this.targetDurationHours,
+    required this.timeRemainingLabel, // <--- REQUIRED
   });
 
-  // Factory to parse Firebase Snapshot
+  // Factory to convert Firebase JSON into this Object
   factory BrewingState.fromMap(Map<dynamic, dynamic> data) {
-    final sensors = data['sensors'] ?? {};
     final status = data['live_status'] ?? {};
+    final sensors = data['sensors'] ?? {};
 
     return BrewingState(
-      currentProcess: status['current_process'] ?? 'Idle',
-      // Ensure we convert to double, even if Firebase sends an integer (e.g. 28)
+      currentProcess: status['current_process'] ?? "Unknown",
+      // If the script hasn't sent the label yet, show "Calculating..."
+      timeRemainingLabel: status['time_remaining_label'] ?? "Calculating...", 
+      
+      startTimestamp: status['start_timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
+      targetDurationHours: status['target_duration_hours'] ?? 72,
+      
+      // Ensure values are doubles (Firebase sometimes sends integers)
       temperature: (sensors['temperature'] ?? 0).toDouble(),
       phLevel: (sensors['ph_level'] ?? 0).toDouble(),
       specificGravity: (sensors['specific_gravity'] ?? 0).toDouble(),
-      startTimestamp: status['start_timestamp'] ?? DateTime.now().millisecondsSinceEpoch,
-      targetDurationHours: status['target_duration_hours'] ?? 1,
     );
   }
 
-  // Logic to calculate how full the progress bar should be (0.0 to 1.0)
+  // Helper to calculate percentage for the circular indicator
   double get progressPercentage {
-    final startTime = DateTime.fromMillisecondsSinceEpoch(startTimestamp);
+    final start = DateTime.fromMillisecondsSinceEpoch(startTimestamp);
     final now = DateTime.now();
-    final elapsedMinutes = now.difference(startTime).inMinutes;
-    final totalMinutes = targetDurationHours * 60;
+    final totalDuration = Duration(hours: targetDurationHours);
     
-    if (totalMinutes <= 0) return 0.0;
+    final elapsed = now.difference(start);
+    double percent = elapsed.inMinutes / totalDuration.inMinutes;
     
-    double percent = elapsedMinutes / totalMinutes;
-    // Clamp ensures it never goes below 0% or above 100%
-    return percent.clamp(0.0, 1.0); 
+    // Clamp between 0.0 and 1.0
+    if (percent < 0) return 0.0;
+    if (percent > 1) return 1.0;
+    return percent;
   }
 }

@@ -19,7 +19,8 @@ class DatabaseService {
             phLevel: 0, 
             specificGravity: 0,
             startTimestamp: DateTime.now().millisecondsSinceEpoch, 
-            targetDurationHours: 1
+            targetDurationHours: 1,
+            timeRemainingLabel: "Waiting for connection..." // <--- ADDED THIS
         );
       }
       return BrewingState.fromMap(data);

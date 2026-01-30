@@ -28,6 +28,7 @@ dependencies:
   path_provider: ^2.1.2          # Saves APK to phone storage
   permission_handler: ^11.3.0    # Asks for permission to install
   url_launcher: ^6.3.0           # Backup: Open browser if install fails
+  fl_chart: ^1.1.1
 
 dev_dependencies:
   flutter_test:
