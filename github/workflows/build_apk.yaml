@@ -1,0 +1,73 @@
+name: Build & Release APKs
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APKs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # 1. Setup Java 17 (Required for Flutter 3.19+)
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 2. Setup Flutter
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0' # Or 'stable' if you always want the latest
+          channel: 'stable'
+
+      # 3. Decode the Secret Key (This recreates the file on the server)
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.PLAY_STORE_UPLOAD_KEY }}" | base64 --decode > android/app/upload-keystore.jks
+
+      # 4. Install Dependencies
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # 5. Build Signed Release APK
+      - name: Build Release APK
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PLAY_STORE_UPLOAD_KEY: "true" # Triggers the logic in build.gradle
+        run: flutter build apk --release
+
+      # 6. Build Debug APK
+      - name: Build Debug APK
+        run: flutter build apk --debug
+
+      # 7. Rename Files with Version Number
+      - name: Rename APKs
+        run: |
+          # Read version from pubspec.yaml
+          VERSION=$(grep 'version:' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1)
+          echo "Building Version: $VERSION"
+          
+          # Rename
+          mv build/app/outputs/flutter-apk/app-release.apk "Kaong Wine Monitor (v$VERSION).apk"
+          mv build/app/outputs/flutter-apk/app-debug.apk "Kaong Wine Monitor (v$VERSION)-Debug.apk"
+
+      # 8. Upload Release to GitHub
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Release-APK
+          path: "Kaong Wine Monitor (v*).apk"
+
+      # 9. Upload Debug to GitHub
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Debug-APK
+          path: "Kaong Wine Monitor (v*)-Debug.apk"

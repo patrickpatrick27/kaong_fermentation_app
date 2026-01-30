@@ -21,19 +21,43 @@ dependencies:
   firebase_core: ^2.24.2
   firebase_database: ^10.4.0
 
-  # --- Auto-Update Stack (From your Training Project) ---
+  # --- Auto-Update Stack ---
   http: ^1.2.0               
-  package_info_plus: ^8.0.0      # Checks current version
-  flutter_app_installer: ^1.0.2  # <--- THE FIX: Modern APK installer
-  path_provider: ^2.1.2          # Saves APK to phone storage
-  permission_handler: ^11.3.0    # Asks for permission to install
-  url_launcher: ^6.3.0           # Backup: Open browser if install fails
-  fl_chart: ^1.1.1
+  package_info_plus: ^8.0.0      
+  flutter_app_installer: ^1.0.2  
+  path_provider: ^2.1.2          
+  permission_handler: ^11.3.0    
+  url_launcher: ^6.3.0           
+  fl_chart: ^1.1.1 # <--- Graphing Library
+  google_fonts: ^8.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  # --- ASSET GENERATORS ---
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.10
 
 flutter:
   uses-material-design: true
+  # Ensure assets folder is declared
+  assets:
+    - assets/
+
+# --- LAUNCHER ICON CONFIG ---
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon.png" # Make sure this file exists!
+  min_sdk_android: 21
+  adaptive_icon_background: "#673AB7" # Deep Purple
+  adaptive_icon_foreground: "assets/icon.png"
+
+# --- SPLASH SCREEN CONFIG ---
+flutter_native_splash:
+  color: "#673AB7" # Deep Purple background matching your theme
+  image: "assets/icon.png" # Centered Logo
+  android_12:
+    image: "assets/icon.png"
+    icon_background_color: "#673AB7"

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'ui/screens/dashboard_screen.dart';
+import 'ui/screens/login_screen.dart'; // <--- Import the Login Screen
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(const KaongBrewingApp());
 }
 
@@ -26,21 +28,14 @@ class _KaongBrewingAppState extends State<KaongBrewingApp> {
   }
 
   Future<FirebaseApp> _initFirebase() async {
-    // 1. Check if valid app exists
-    if (Firebase.apps.isNotEmpty) {
-      return Firebase.app();
-    }
-
+    if (Firebase.apps.isNotEmpty) return Firebase.app();
     try {
-      // 2. FORCE THE DATABASE URL MANUALLY
-      // We override the default options to guarantee it connects to Asia
       return await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform.copyWith(
           databaseURL: 'https://kaong-fermentation-app-default-rtdb.asia-southeast1.firebasedatabase.app',
         ),
       );
     } catch (e) {
-      // 3. Fail-safe: If it complains about duplicates, just use the existing one
       if (Firebase.apps.isNotEmpty) return Firebase.app();
       rethrow;
     }
@@ -55,37 +50,16 @@ class _KaongBrewingAppState extends State<KaongBrewingApp> {
       home: FutureBuilder(
         future: _initialization,
         builder: (context, snapshot) {
-          // If Connected
-          if (snapshot.connectionState == ConnectionState.done) {
-            return const DashboardScreen();
-          }
-
-          // If Error
           if (snapshot.hasError) {
-            return Scaffold(
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text("Connection Error:\n${snapshot.error}", 
-                    style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
-                ),
-              ),
-            );
+            FlutterNativeSplash.remove();
+            return Scaffold(body: Center(child: Text("Error: ${snapshot.error}")));
           }
-
-          // Loading
-          return const Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 20),
-                  Text("Connecting to Asian Server..."),
-                ],
-              ),
-            ),
-          );
+          if (snapshot.connectionState == ConnectionState.done) {
+            FlutterNativeSplash.remove();
+            // UPDATED: Start at LoginScreen
+            return const LoginScreen(); 
+          }
+          return const SizedBox.shrink();
         },
       ),
     );

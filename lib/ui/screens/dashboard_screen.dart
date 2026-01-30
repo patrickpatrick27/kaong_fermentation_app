@@ -1,12 +1,18 @@
+import 'dart:async'; // Required for the Timer
+import 'dart:ui';    // Required for tabular figures (prevent number jumping)
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/database_service.dart';
 import '../../services/update_service.dart';
 import '../../models/brewing_state.dart';
-import 'history_screen.dart'; // <--- IMPORT THE HISTORY SCREEN
+import 'history_screen.dart';
+import 'graph_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final String machineId; // The ID of the machine we are watching
+
+  const DashboardScreen({super.key, required this.machineId});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -19,7 +25,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Check for updates silently on startup
     _updateService.checkForUpdates((downloadUrl) {
       if (mounted) _showUpdateDialog(downloadUrl);
     });
@@ -46,115 +51,120 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: const Text("Kaong Wine Fermentation Monitor"),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        centerTitle: true,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F5FA),
+        appBar: AppBar(
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF4527A0), Color(0xFF7B1FA2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          // UPDATED TITLE: Shows the specific Machine ID
+          title: Column(
+            children: [
+              Text("KAONG MONITOR", 
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 1.2)
+              ),
+              Text(widget.machineId, // Displays "machine_001" etc.
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)
+              ),
+            ],
+          ),
+          centerTitle: true,
+          elevation: 4,
+          bottom: TabBar(
+            indicatorColor: Colors.amberAccent,
+            indicatorWeight: 4,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white60,
+            labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            tabs: const [
+              Tab(text: "DASHBOARD", icon: Icon(Icons.dashboard_outlined)),
+              Tab(text: "ANALYTICS", icon: Icon(Icons.show_chart)),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildDashboardTab(),
+            // Pass the ID to the Graph Screen
+            GraphScreen(machineId: widget.machineId), 
+          ],
+        ),
       ),
-      body: StreamBuilder<BrewingState>(
-        stream: _dbService.brewingStream,
-        builder: (context, snapshot) {
-          // 1. Error Handling
-          if (snapshot.hasError) {
-            return Center(child: Text("Connection Error: ${snapshot.error}"));
-          }
-          
-          // 2. Loading State
-          if (!snapshot.hasData) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+    );
+  }
+
+  Widget _buildDashboardTab() {
+    return StreamBuilder<BrewingState>(
+      // Pass the ID to the Stream
+      stream: _dbService.getBrewingStream(widget.machineId), 
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Center(child: Text("Connection Error: ${snapshot.error}"));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+        final state = snapshot.data!;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatusCard(state),
+              const SizedBox(height: 25),
+              Text("LIVE SENSORS", style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600], letterSpacing: 1.0)),
+              const SizedBox(height: 15),
+              GridView.count(
+                shrinkWrap: true,
+                crossAxisCount: 2,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
+                childAspectRatio: 1.0,
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 20),
-                  Text("Syncing with Sensors...")
+                  _buildSensorCard("Temperature", "${state.temperature.toStringAsFixed(1)}°C", Icons.thermostat, Colors.orange, "temperature", "°C"),
+                  _buildSensorCard("pH Level", state.phLevel.toStringAsFixed(2), Icons.water_drop, Colors.blue, "ph_level", ""),
+                  _buildSensorCard("Gravity", state.specificGravity.toStringAsFixed(3), Icons.scale, Colors.green, "specific_gravity", ""),
+                  
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 5))],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                         Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.science, size: 28, color: Colors.purple)),
+                         const SizedBox(height: 12),
+                         Text(state.currentProcess, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                         const SizedBox(height: 4),
+                         Text("Status", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  )
                 ],
               ),
-            );
-          }
-
-          final state = snapshot.data!;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Main Status Card with Circular Timer
-                _buildStatusCard(state),
-                
-                const SizedBox(height: 25),
-                const Text("Sensor Telemetry", 
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 15),
-                
-                // 2. Sensor Grid
-                GridView.count(
-                  shrinkWrap: true,
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 15,
-                  mainAxisSpacing: 15,
-                  childAspectRatio: 1.1, // Adjusts the shape of the cards
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    // Clickable Cards (Pass dbKey and unit)
-                    _buildSensorCard("Temperature", "${state.temperature.toStringAsFixed(1)}°C", Icons.thermostat, Colors.orange, "temperature", "°C"),
-                    _buildSensorCard("pH Level", state.phLevel.toStringAsFixed(2), Icons.water_drop, Colors.blue, "ph_level", ""),
-                    _buildSensorCard("Gravity", state.specificGravity.toStringAsFixed(3), Icons.scale, Colors.green, "specific_gravity", ""),
-                    
-                    // Status Card (Not clickable, so we build it manually or pass nulls if we modified the function differently)
-                    // I will use a simple container here for the non-clickable status
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                           BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2))
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                           Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.science, size: 28, color: Colors.purple),
-                          ),
-                           const SizedBox(height: 12),
-                           Text(state.currentProcess, 
-                             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), 
-                             textAlign: TextAlign.center
-                           ),
-                           const SizedBox(height: 4),
-                           const Text("Current Status", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildStatusCard(BrewingState state) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.deepPurple.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))
-        ],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: const Color(0xFF4527A0).withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Row(
         children: [
@@ -162,12 +172,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             radius: 55.0,
             lineWidth: 10.0,
             percent: state.progressPercentage,
-            center: Text(
-              "${(state.progressPercentage * 100).toInt()}%",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            progressColor: Colors.deepPurple,
-            backgroundColor: Colors.deepPurple.shade50,
+            center: Text("${(state.progressPercentage * 100).toInt()}%", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20, color: const Color(0xFF4527A0))),
+            progressColor: const Color(0xFF4527A0),
+            backgroundColor: const Color(0xFFEDE7F6),
             circularStrokeCap: CircularStrokeCap.round,
             animation: true,
             animateFromLastPercent: true,
@@ -177,22 +184,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Time Remaining", 
-                  style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-                
-                // --- THE NEW DYNAMIC TEXT ---
+                Text("REMAINING TIME", style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
                 const SizedBox(height: 4),
-                Text(
-                  state.timeRemainingLabel, 
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                // -----------------------------
                 
+                // --- REPLACED STATIC TEXT WITH LIVE TIMER ---
+                LiveActiveTimer(
+                  startTimestamp: state.startTimestamp, 
+                  targetHours: state.targetDurationHours
+                ),
+                // -------------------------------------------------
+
                 const SizedBox(height: 8),
-                Text("Target: ${state.targetDurationHours} Hours", 
-                     style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+                  child: Text("Target: ${state.targetDurationHours}h", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500)),
+                ),
               ],
             ),
           )
@@ -201,58 +208,109 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // UPDATED: Now accepts dbKey and unit to enable navigation
   Widget _buildSensorCard(String title, String value, IconData icon, Color color, String dbKey, String unit) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         onTap: () {
-          // Navigate to History Screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => HistoryScreen(
-                sensorName: title,
-                sensorKey: dbKey,
-                unit: unit,
-                themeColor: color,
-              ),
-            ),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (context) => 
+            HistoryScreen(
+              machineId: widget.machineId, 
+              sensorName: title, 
+              sensorKey: dbKey, 
+              unit: unit, 
+              themeColor: color
+            )
+          ));
         },
         child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            // color: Colors.white, // Color is handled by Card default or theme
-          ),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))]),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 28, color: color),
-              ),
+              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, size: 28, color: color)),
               const SizedBox(height: 12),
-              Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              Text(value, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
               const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_ios, size: 10, color: Colors.grey)
-                ],
-              ),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(title, style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)), const SizedBox(width: 4), Icon(Icons.arrow_forward_ios, size: 10, color: Colors.grey[300])]),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// --- NEW WIDGET: HANDLES THE LIVE TICKING ---
+class LiveActiveTimer extends StatefulWidget {
+  final int startTimestamp;
+  final int targetHours;
+
+  const LiveActiveTimer({super.key, required this.startTimestamp, required this.targetHours});
+
+  @override
+  State<LiveActiveTimer> createState() => _LiveActiveTimerState();
+}
+
+class _LiveActiveTimerState extends State<LiveActiveTimer> {
+  late Timer _timer;
+  String _displayText = "Calculating...";
+
+  @override
+  void initState() {
+    super.initState();
+    _updateTime();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) => _updateTime());
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void _updateTime() {
+    final start = DateTime.fromMillisecondsSinceEpoch(widget.startTimestamp);
+    final end = start.add(Duration(hours: widget.targetHours));
+    final now = DateTime.now();
+    
+    final remaining = end.difference(now);
+
+    if (remaining.isNegative) {
+      if (mounted && _displayText != "Complete") {
+        setState(() => _displayText = "Complete");
+      }
+      return;
+    }
+
+    final days = remaining.inDays;
+    final hours = remaining.inHours % 24;
+    final minutes = remaining.inMinutes % 60;
+    final seconds = remaining.inSeconds % 60;
+
+    if (mounted) {
+      setState(() {
+        // Format: 1d 4h 20m 30s
+        _displayText = "${days}d ${hours}h ${minutes}m ${seconds}s";
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _displayText,
+      style: GoogleFonts.poppins(
+        fontSize: 18, 
+        fontWeight: FontWeight.bold, 
+        color: const Color(0xFF2D2D2D),
+        // This stops the text from jittering as the numbers change width
+        fontFeatures: [const FontFeature.tabularFigures()], 
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
