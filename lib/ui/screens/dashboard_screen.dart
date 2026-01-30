@@ -1,12 +1,12 @@
-import 'dart:async'; 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+// --- IMPORTS ---
 import '../../services/database_service.dart';
-// Removed UpdateService import
 import '../../models/brewing_state.dart';
-import 'history_screen.dart';
+import '../widgets/process_timer.dart'; 
+import '../widgets/sensor_card.dart';   
 import 'graph_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -20,8 +20,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final DatabaseService _dbService = DatabaseService();
-  
-  // Removed UpdateService instantiation and initState logic
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +40,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: Column(
             children: [
               Text("KAONG MONITOR", 
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 1.2)
+                style: GoogleFonts.poppins(
+                  fontSize: 18, 
+                  fontWeight: FontWeight.w600, 
+                  color: Colors.white, 
+                  letterSpacing: 1.2
+                )
               ),
               Text(widget.machineId, 
                 style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)
@@ -88,9 +91,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildStatusCard(state),
+              
               const SizedBox(height: 25),
-              Text("LIVE SENSORS", style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600], letterSpacing: 1.0)),
+              Text("LIVE SENSORS", 
+                style: GoogleFonts.poppins(
+                  fontSize: 14, 
+                  fontWeight: FontWeight.w600, 
+                  color: Colors.grey[600], 
+                  letterSpacing: 1.0
+                )
+              ),
               const SizedBox(height: 15),
+              
               GridView.count(
                 shrinkWrap: true,
                 crossAxisCount: 2,
@@ -99,25 +111,89 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 childAspectRatio: 1.0,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  _buildSensorCard("Temperature", "${state.temperature.toStringAsFixed(1)}°C", Icons.thermostat, Colors.orange, "temperature", "°C"),
-                  _buildSensorCard("pH Level", state.phLevel.toStringAsFixed(2), Icons.water_drop, Colors.blue, "ph_level", ""),
-                  _buildSensorCard("Gravity", state.specificGravity.toStringAsFixed(3), Icons.scale, Colors.green, "specific_gravity", ""),
+                  SensorCard(
+                    title: "Temperature", 
+                    value: state.temperature.toStringAsFixed(1), 
+                    unit: "°C",
+                    icon: Icons.thermostat, 
+                    color: Colors.orange, 
+                    machineId: widget.machineId,
+                    dbKey: "temperature", 
+                  ),
+                  SensorCard(
+                    title: "pH Level", 
+                    value: state.phLevel.toStringAsFixed(2), 
+                    unit: "",
+                    icon: Icons.water_drop, 
+                    color: Colors.blue, 
+                    machineId: widget.machineId,
+                    dbKey: "ph_level", 
+                  ),
+                  SensorCard(
+                    title: "Gravity", 
+                    value: state.specificGravity.toStringAsFixed(3), 
+                    unit: "",
+                    icon: Icons.scale, 
+                    color: Colors.green, 
+                    machineId: widget.machineId,
+                    dbKey: "specific_gravity", 
+                  ),
                   
+                  // --- CLEAN STATUS CARD ---
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      boxShadow: [BoxShadow(color: Colors.deepPurple.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 5))],
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                         Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), shape: BoxShape.circle), child: const Icon(Icons.science, size: 28, color: Colors.purple)),
-                         const SizedBox(height: 12),
-                         Text(state.currentProcess, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                         const SizedBox(height: 4),
-                         Text("Status", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.purple.withOpacity(0.15), 
+                          blurRadius: 20, 
+                          offset: const Offset(0, 10)
+                        )
                       ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Icon Header (Top Left)
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.science, color: Colors.purple, size: 24),
+                          ),
+                          
+                          // Process Info (Bottom Left)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                state.currentProcess,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16, 
+                                  fontWeight: FontWeight.bold, 
+                                  color: Colors.purple
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Status",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12, 
+                                  color: Colors.grey[600]
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
                   )
                 ],
@@ -135,7 +211,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: const Color(0xFF4527A0).withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4527A0).withOpacity(0.15), 
+            blurRadius: 20, 
+            offset: const Offset(0, 8)
+          )
+        ],
       ),
       child: Row(
         children: [
@@ -143,7 +225,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             radius: 55.0,
             lineWidth: 10.0,
             percent: state.progressPercentage,
-            center: Text("${(state.progressPercentage * 100).toInt()}%", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20, color: const Color(0xFF4527A0))),
+            center: Text(
+              "${(state.progressPercentage * 100).toInt()}%", 
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20, color: const Color(0xFF4527A0))
+            ),
             progressColor: const Color(0xFF4527A0),
             backgroundColor: const Color(0xFFEDE7F6),
             circularStrokeCap: CircularStrokeCap.round,
@@ -155,7 +240,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("REMAINING TIME", style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
+                Text("REMAINING TIME", 
+                  style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)
+                ),
                 const SizedBox(height: 4),
                 LiveActiveTimer(
                   startTimestamp: state.startTimestamp, 
@@ -165,116 +252,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-                  child: Text("Target: ${state.targetDurationHours}h", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500)),
+                  child: Text(
+                    "Target: ${state.targetDurationHours}h", 
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500)
+                  ),
                 ),
               ],
             ),
           )
         ],
       ),
-    );
-  }
-
-  Widget _buildSensorCard(String title, String value, IconData icon, Color color, String dbKey, String unit) {
-    return Card(
-      elevation: 0,
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => 
-            HistoryScreen(
-              machineId: widget.machineId, 
-              sensorName: title, 
-              sensorKey: dbKey, 
-              unit: unit, 
-              themeColor: color
-            )
-          ));
-        },
-        child: Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: color.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))]),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, size: 28, color: color)),
-              const SizedBox(height: 12),
-              Text(value, style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
-              const SizedBox(height: 4),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text(title, style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)), const SizedBox(width: 4), Icon(Icons.arrow_forward_ios, size: 10, color: Colors.grey[300])]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class LiveActiveTimer extends StatefulWidget {
-  final int startTimestamp;
-  final int targetHours;
-
-  const LiveActiveTimer({super.key, required this.startTimestamp, required this.targetHours});
-
-  @override
-  State<LiveActiveTimer> createState() => _LiveActiveTimerState();
-}
-
-class _LiveActiveTimerState extends State<LiveActiveTimer> {
-  late Timer _timer;
-  String _displayText = "Calculating...";
-
-  @override
-  void initState() {
-    super.initState();
-    _updateTime();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) => _updateTime());
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  void _updateTime() {
-    final start = DateTime.fromMillisecondsSinceEpoch(widget.startTimestamp);
-    final end = start.add(Duration(hours: widget.targetHours));
-    final now = DateTime.now();
-    
-    final remaining = end.difference(now);
-
-    if (remaining.isNegative) {
-      if (mounted && _displayText != "Complete") {
-        setState(() => _displayText = "Complete");
-      }
-      return;
-    }
-
-    final days = remaining.inDays;
-    final hours = remaining.inHours % 24;
-    final minutes = remaining.inMinutes % 60;
-    final seconds = remaining.inSeconds % 60;
-
-    if (mounted) {
-      setState(() {
-        _displayText = "${days}d ${hours}h ${minutes}m ${seconds}s";
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      _displayText,
-      style: GoogleFonts.poppins(
-        fontSize: 18, 
-        fontWeight: FontWeight.bold, 
-        color: const Color(0xFF2D2D2D),
-        fontFeatures: [const FontFeature.tabularFigures()], 
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }

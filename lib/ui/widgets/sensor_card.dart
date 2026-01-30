@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../screens/history_screen.dart'; 
 
 class SensorCard extends StatelessWidget {
   final String title;
@@ -7,6 +8,8 @@ class SensorCard extends StatelessWidget {
   final String unit;
   final IconData icon;
   final Color color;
+  final String machineId; 
+  final String dbKey;     
 
   const SensorCard({
     super.key,
@@ -15,6 +18,8 @@ class SensorCard extends StatelessWidget {
     required this.unit,
     required this.icon,
     required this.color,
+    required this.machineId,
+    required this.dbKey,
   });
 
   @override
@@ -31,65 +36,76 @@ class SensorCard extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            // Decorative background circle for modern feel
-            Positioned(
-              right: -20,
-              top: -20,
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: color.withOpacity(0.05),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Icon Header
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: color, size: 24),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => 
+              HistoryScreen(
+                machineId: machineId, 
+                sensorName: title, 
+                sensorKey: dbKey, 
+                unit: unit, 
+                themeColor: color
+              )
+            ));
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Icon Header
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  
-                  // Value and Title
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            value,
-                            style: AppTheme.valueStyle.copyWith(color: color),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                
+                // Value and Title
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          value,
+                          style: GoogleFonts.poppins(
+                            fontSize: 22, 
+                            fontWeight: FontWeight.bold, 
+                            color: color
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            unit,
-                            style: AppTheme.subHeaderStyle,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          unit,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14, 
+                            color: Colors.grey
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12, 
+                        color: Colors.grey[600]
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        title,
-                        style: AppTheme.subHeaderStyle,
-                      ),
-                    ],
-                  )
-                ],
-              ),
+                    ),
+                  ],
+                )
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
