@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dashboard_screen.dart';
+import '../../services/update_service.dart'; // <--- Import UpdateService
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,11 +12,55 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _controller = TextEditingController();
+  final UpdateService _updateService = UpdateService(); // Instance of service
+
+  @override
+  void initState() {
+    super.initState();
+    // 🚀 Check for updates as soon as the screen loads
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    // 1. Ask GitHub for the latest version
+    final String? downloadUrl = await _updateService.checkForUpdate();
+
+    // 2. If an update is found, show the dialog
+    if (downloadUrl != null && mounted) {
+      _showUpdateDialog(downloadUrl);
+    }
+  }
+
+  void _showUpdateDialog(String url) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing by tapping outside
+      builder: (ctx) => AlertDialog(
+        title: const Text("Update Available 🚀"),
+        content: const Text(
+          "A new version of Kaong Monitor is available.\n\n"
+          "Please update to ensure the app works correctly with the latest sensor data."
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Later"),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _updateService.downloadUpdate(url); // Open Browser
+            },
+            child: const Text("Update Now"),
+          )
+        ],
+      ),
+    );
+  }
 
   void _login() {
     if (_controller.text.trim().isEmpty) return;
     
-    // Navigate to Dashboard, passing the Machine ID
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -34,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.wine_bar, size: 80, color: Colors.deepPurple),
+              const Icon(Icons.wine_bar, size: 80, color: Colors.deepPurple),
               const SizedBox(height: 20),
               Text(
                 "Kaong Monitor",
@@ -47,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   labelText: "Enter Machine ID",
                   hintText: "e.g., machine_001",
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: Icon(Icons.qr_code),
+                  prefixIcon: const Icon(Icons.qr_code),
                 ),
               ),
               const SizedBox(height: 20),
@@ -64,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text("Try: machine_001, machine_002, or machine_003", style: TextStyle(color: Colors.grey)),
+              const Text("Try: machine_001, machine_002, or machine_003", style: TextStyle(color: Colors.grey)),
             ],
           ),
         ),

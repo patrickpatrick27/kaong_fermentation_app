@@ -1,91 +1,68 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:flutter_app_installer/flutter_app_installer.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:version/version.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UpdateService {
-  // Your GitHub details
-  static const String githubUser = "patrickpatrick27"; 
-  static const String githubRepo = "kaong_fermentation_app"; 
+  // ⚠️ YOUR GITHUB CONFIGURATION
+  final String userName = "patrickpatrick27"; 
+  final String repoName = "kaong_fermentation_app"; 
 
-  /// 1. Check GitHub for a new version
-  Future<void> checkForUpdates(Function(String) onUpdateAvailable) async {
+  /// Checks GitHub for releases. Returns the download URL if a new version exists.
+  Future<String?> checkForUpdate() async {
     try {
-      // Get current installed version
+      // 1. Get current app version
       PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      String currentVersion = packageInfo.version;
+      Version currentVersion = Version.parse(packageInfo.version);
+      print("📱 Current App Version: $currentVersion");
 
-      // Query GitHub API
-      final url = Uri.parse('https://api.github.com/repos/$githubUser/$githubRepo/releases/latest');
-      final response = await http.get(url);
+      // 2. Query GitHub API for the latest release
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/$userName/$repoName/releases/latest'),
+      );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        
-        // GitHub tags usually look like "v1.0.0", so we remove the 'v'
-        String latestTag = data['tag_name'].toString().replaceAll('v', ''); 
-        
-        // Find the APK download URL in the assets list
-        String? apkUrl;
-        if (data['assets'] != null) {
-          for (var asset in data['assets']) {
-            if (asset['name'].toString().endsWith('.apk')) {
-              apkUrl = asset['browser_download_url'];
-              break;
-            }
+        final data = json.decode(response.body);
+        String latestTag = data['tag_name']; // e.g. "v1.0.12"
+
+        // Remove 'v' prefix if present
+        if (latestTag.startsWith('v')) {
+          latestTag = latestTag.substring(1);
+        }
+
+        Version latestVersion = Version.parse(latestTag);
+        print("☁️ Latest GitHub Version: $latestVersion");
+
+        // 3. Compare: Is GitHub version > Current version?
+        if (latestVersion > currentVersion) {
+          List assets = data['assets'];
+          // Find the APK file in the release assets
+          final apkAsset = assets.firstWhere(
+            (asset) => asset['name'].toString().endsWith(".apk"),
+            orElse: () => null,
+          );
+
+          if (apkAsset != null) {
+            return apkAsset['browser_download_url'];
           }
         }
-
-        // Compare versions (Simple string check)
-        // If the tag on GitHub is different from the installed version, prompt update
-        if (latestTag != currentVersion && apkUrl != null) {
-          onUpdateAvailable(apkUrl);
-        }
+      } else {
+        print("⚠️ Failed to fetch releases: ${response.statusCode}");
       }
     } catch (e) {
-      print("Update check failed: $e");
+      print("❌ Error checking for updates: $e");
     }
+    return null; // No update found or error occurred
   }
 
-  /// 2. Download APK & Install
-  Future<void> downloadAndInstall(String url) async {
-    // Request storage & install permissions
-    // Note: Android 11+ (API 30+) handles storage differently, 
-    // but path_provider + getTemporaryDirectory usually works fine without explicit storage perm.
-    // We request install packages permission just in case.
-    await Permission.requestInstallPackages.request();
-
-    try {
-      print("Downloading update from: $url");
-      
-      // Download the file
-      final response = await http.get(Uri.parse(url));
-      
-      if (response.statusCode == 200) {
-        // Save to temporary storage
-        final tempDir = await getTemporaryDirectory();
-        final file = File('${tempDir.path}/update.apk');
-        
-        // Write the file to disk
-        await file.writeAsBytes(response.bodyBytes);
-        print("Download complete. Saved to: ${file.path}");
-
-        // --- FIXED SECTION ---
-        // Create an instance of the installer
-        final FlutterAppInstaller installer = FlutterAppInstaller();
-        
-        // Launch the native installer
-        await installer.installApk(filePath: file.path);
-        // ---------------------
-        
-      } else {
-        print("Download failed with status: ${response.statusCode}");
-      }
-    } catch (e) {
-      print("Installation error: $e");
+  /// Opens the browser to download the update
+  Future<void> downloadUpdate(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      print("Could not launch $url");
     }
   }
 }

@@ -3,7 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'ui/screens/login_screen.dart'; // <--- Import the Login Screen
+import 'ui/screens/login_screen.dart';
+import 'services/update_service.dart'; // <--- Import UpdateService
 
 void main() {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -56,12 +57,69 @@ class _KaongBrewingAppState extends State<KaongBrewingApp> {
           }
           if (snapshot.connectionState == ConnectionState.done) {
             FlutterNativeSplash.remove();
-            // UPDATED: Start at LoginScreen
-            return const LoginScreen(); 
+            
+            // WRAPPER: Wraps LoginScreen to check for updates on startup
+            return const UpdateCheckWrapper(child: LoginScreen());
           }
           return const SizedBox.shrink();
         },
       ),
     );
+  }
+}
+
+/// A wrapper widget that checks for updates as soon as the app loads
+class UpdateCheckWrapper extends StatefulWidget {
+  final Widget child;
+  const UpdateCheckWrapper({super.key, required this.child});
+
+  @override
+  State<UpdateCheckWrapper> createState() => _UpdateCheckWrapperState();
+}
+
+class _UpdateCheckWrapperState extends State<UpdateCheckWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    final updateService = UpdateService();
+    // 1. Check GitHub for updates
+    final downloadUrl = await updateService.checkForUpdate();
+
+    // 2. If update found and widget is valid, show dialog
+    if (downloadUrl != null && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false, // User must choose an option
+        builder: (context) => AlertDialog(
+          title: const Text("Update Available 🚀"),
+          content: const Text(
+            "A newer version of Kaong Monitor is available.\n\n"
+            "Please update to ensure the app works correctly."
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context), // Close dialog
+              child: const Text("Later"),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                updateService.downloadUpdate(downloadUrl);
+              },
+              child: const Text("Update Now"),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }

@@ -1,16 +1,16 @@
-import 'dart:async'; // Required for the Timer
-import 'dart:ui';    // Required for tabular figures (prevent number jumping)
+import 'dart:async'; 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/database_service.dart';
-import '../../services/update_service.dart';
+// Removed UpdateService import
 import '../../models/brewing_state.dart';
 import 'history_screen.dart';
 import 'graph_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final String machineId; // The ID of the machine we are watching
+  final String machineId; 
 
   const DashboardScreen({super.key, required this.machineId});
 
@@ -20,34 +20,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final DatabaseService _dbService = DatabaseService();
-  final UpdateService _updateService = UpdateService();
-
-  @override
-  void initState() {
-    super.initState();
-    _updateService.checkForUpdates((downloadUrl) {
-      if (mounted) _showUpdateDialog(downloadUrl);
-    });
-  }
-
-  void _showUpdateDialog(String url) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Update Available"),
-        content: const Text("A new version of the Kaong Wine Monitor is available."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _updateService.downloadAndInstall(url);
-            },
-            child: const Text("Update Now"),
-          )
-        ],
-      ),
-    );
-  }
+  
+  // Removed UpdateService instantiation and initState logic
 
   @override
   Widget build(BuildContext context) {
@@ -65,13 +39,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
-          // UPDATED TITLE: Shows the specific Machine ID
           title: Column(
             children: [
               Text("KAONG MONITOR", 
                 style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 1.2)
               ),
-              Text(widget.machineId, // Displays "machine_001" etc.
+              Text(widget.machineId, 
                 style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)
               ),
             ],
@@ -93,7 +66,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         body: TabBarView(
           children: [
             _buildDashboardTab(),
-            // Pass the ID to the Graph Screen
             GraphScreen(machineId: widget.machineId), 
           ],
         ),
@@ -103,7 +75,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildDashboardTab() {
     return StreamBuilder<BrewingState>(
-      // Pass the ID to the Stream
       stream: _dbService.getBrewingStream(widget.machineId), 
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Text("Connection Error: ${snapshot.error}"));
@@ -186,14 +157,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text("REMAINING TIME", style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)),
                 const SizedBox(height: 4),
-                
-                // --- REPLACED STATIC TEXT WITH LIVE TIMER ---
                 LiveActiveTimer(
                   startTimestamp: state.startTimestamp, 
                   targetHours: state.targetDurationHours
                 ),
-                // -------------------------------------------------
-
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -243,7 +210,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// --- NEW WIDGET: HANDLES THE LIVE TICKING ---
 class LiveActiveTimer extends StatefulWidget {
   final int startTimestamp;
   final int targetHours;
@@ -292,7 +258,6 @@ class _LiveActiveTimerState extends State<LiveActiveTimer> {
 
     if (mounted) {
       setState(() {
-        // Format: 1d 4h 20m 30s
         _displayText = "${days}d ${hours}h ${minutes}m ${seconds}s";
       });
     }
@@ -306,7 +271,6 @@ class _LiveActiveTimerState extends State<LiveActiveTimer> {
         fontSize: 18, 
         fontWeight: FontWeight.bold, 
         color: const Color(0xFF2D2D2D),
-        // This stops the text from jittering as the numbers change width
         fontFeatures: [const FontFeature.tabularFigures()], 
       ),
       maxLines: 1,
