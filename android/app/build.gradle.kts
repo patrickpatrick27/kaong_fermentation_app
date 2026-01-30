@@ -26,30 +26,41 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        // KOTLIN SYNTAX: Uses parenthesis and quotes
         resValue("string", "app_name", "Kaong Monitor")
     }
 
     signingConfigs {
         create("release") {
-            // Check for GitHub Environment Variables
-            if (System.getenv("PLAY_STORE_UPLOAD_KEY") != null) {
+            // 1. Initialize Properties Object
+            val keystoreProperties = java.util.Properties()
+            
+            // 2. Look for "key.properties" in the root android folder
+            val keystorePropertiesFile = rootProject.file("key.properties")
+
+            if (keystorePropertiesFile.exists()) {
+                // --- LOCAL BUILD: Read from key.properties ---
+                keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+                
+                // Parse the file content
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            } 
+            else if (System.getenv("PLAY_STORE_UPLOAD_KEY") != null) {
+                // --- GITHUB ACTIONS: Read from Environment Variables ---
                 storeFile = file("upload-keystore.jks")
                 storePassword = System.getenv("STORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
-            } else {
-                // Local Fallback
-                try {
-                    storeFile = file("upload-keystore.jks")
-                } catch (e: Exception) {
-                    // Fallback to debug signing if release keystore is missing locally
-                    val debugConfig = getByName("debug")
-                    storeFile = debugConfig.storeFile
-                    storePassword = debugConfig.storePassword
-                    keyAlias = debugConfig.keyAlias
-                    keyPassword = debugConfig.keyPassword
-                }
+            } 
+            else {
+                // --- FALLBACK: Use Debug keys to prevent crash ---
+                val debugConfig = getByName("debug")
+                storeFile = debugConfig.storeFile
+                storePassword = debugConfig.storePassword
+                keyAlias = debugConfig.keyAlias
+                keyPassword = debugConfig.keyPassword
             }
         }
     }
@@ -62,7 +73,6 @@ android {
         }
 
         getByName("debug") {
-            // KOTLIN SYNTAX: explicit assignment
             applicationIdSuffix = ".dev"
             resValue("string", "app_name", "Kaong Monitor (Dev)")
         }
