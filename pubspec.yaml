@@ -2,7 +2,7 @@ name: kaong_fermentation_app
 description: "An application for the Automated Kaong Wine Fermentation System Design Project."
 publish_to: 'none' 
 
-version: 1.0.8+1
+version: 1.0.9+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
