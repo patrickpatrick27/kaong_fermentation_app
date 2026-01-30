@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_database/firebase_database.dart'; // Required for verification
 import 'dashboard_screen.dart';
-import '../../services/update_service.dart'; // <--- Import UpdateService
+import '../../services/update_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,20 +13,17 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _controller = TextEditingController();
-  final UpdateService _updateService = UpdateService(); // Instance of service
+  final UpdateService _updateService = UpdateService();
+  bool _isLoading = false; // To show a spinner while checking
 
   @override
   void initState() {
     super.initState();
-    // 🚀 Check for updates as soon as the screen loads
     _checkForUpdates();
   }
 
   Future<void> _checkForUpdates() async {
-    // 1. Ask GitHub for the latest version
     final String? downloadUrl = await _updateService.checkForUpdate();
-
-    // 2. If an update is found, show the dialog
     if (downloadUrl != null && mounted) {
       _showUpdateDialog(downloadUrl);
     }
@@ -34,22 +32,16 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showUpdateDialog(String url) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing by tapping outside
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: const Text("Update Available 🚀"),
-        content: const Text(
-          "A new version of Kaong Monitor is available.\n\n"
-          "Please update to ensure the app works correctly with the latest sensor data."
-        ),
+        content: const Text("A new version of Kaong Monitor is available."),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("Later"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Later")),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _updateService.downloadUpdate(url); // Open Browser
+              _updateService.downloadUpdate(url);
             },
             child: const Text("Update Now"),
           )
@@ -58,15 +50,45 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _login() {
-    if (_controller.text.trim().isEmpty) return;
-    
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DashboardScreen(machineId: _controller.text.trim()),
-      ),
-    );
+  // --- 🔒 NEW: VERIFY MACHINE ID BEFORE LOGIN ---
+  Future<void> _verifyAndLogin() async {
+    final machineId = _controller.text.trim();
+    if (machineId.isEmpty) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Check if this machine exists in the database
+      final ref = FirebaseDatabase.instance.ref('brewing_state').child(machineId);
+      final snapshot = await ref.get();
+
+      if (!mounted) return;
+
+      if (snapshot.exists) {
+        // ✅ VALID: Proceed to Dashboard
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardScreen(machineId: machineId),
+          ),
+        );
+      } else {
+        // ❌ INVALID: Show Error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Machine ID '$machineId' not found."),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Connection Error: $e"), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -104,12 +126,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     backgroundColor: Colors.deepPurple,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _login,
-                  child: Text("Connect to Machine", style: GoogleFonts.poppins(color: Colors.white)),
+                  onPressed: _isLoading ? null : _verifyAndLogin, // Disable button if loading
+                  child: _isLoading 
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text("Connect to Machine", style: GoogleFonts.poppins(color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text("Try: machine_001, machine_002, or machine_003", style: TextStyle(color: Colors.grey)),
+              const Text("Try: machine_001", style: TextStyle(color: Colors.grey)),
             ],
           ),
         ),
