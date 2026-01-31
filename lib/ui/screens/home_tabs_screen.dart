@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'dashboard_screen.dart';
 import 'control_screen.dart';
-import 'graph_screen.dart'; // 👈 Contains GraphController
+import 'graph_screen.dart'; 
 import 'login_screen.dart';
 
 class HomeTabsScreen extends StatefulWidget {
@@ -15,23 +15,26 @@ class HomeTabsScreen extends StatefulWidget {
   State<HomeTabsScreen> createState() => _HomeTabsScreenState();
 }
 
-class _HomeTabsScreenState extends State<HomeTabsScreen> {
-  // 1. 🕹️ INSTANTIATE THE CONTROLLER
+class _HomeTabsScreenState extends State<HomeTabsScreen> with SingleTickerProviderStateMixin {
+  
   final GraphController _graphController = GraphController();
+  late TabController _tabController;
 
-  // 2. 📡 THE CALLBACK: Handles requests from Dashboard
-  void _onHistoryRequested(String metric) {
-    // A. Tell the Graph Screen to switch mode & metric
-    _graphController.switchToHistory(metric);
-    
-    // B. Visually switch to the Analytics Tab (Index 2)
-    DefaultTabController.of(context).animateTo(2); 
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
   }
 
-  // 3. 🧹 CLEANUP: Always dispose controllers
+  void _onHistoryRequested(String metric) {
+    _graphController.switchToHistory(metric);
+    _tabController.animateTo(2); 
+  }
+
   @override
   void dispose() {
     _graphController.dispose();
+    _tabController.dispose(); 
     super.dispose();
   }
   
@@ -64,68 +67,71 @@ class _HomeTabsScreenState extends State<HomeTabsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3, 
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5FA),
-        appBar: AppBar(
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF4527A0), Color(0xFF7B1FA2)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F5FA),
+      appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4527A0), Color(0xFF7B1FA2)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          leading: IconButton(
+        ),
+        // ❌ Leading removed
+        automaticallyImplyLeading: false, // Prevents back arrow if one appears
+        
+        title: Column(
+          children: [
+            Text("KAONG MONITOR", 
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 1.2)
+            ),
+            Text(widget.machineId, 
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)
+            ),
+          ],
+        ),
+        centerTitle: true,
+        
+        // 👇 LOGOUT BUTTON MOVED HERE (Upper Right)
+        actions: [
+          IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: "Logout",
             onPressed: _logout,
           ),
-          title: Column(
-            children: [
-              Text("KAONG MONITOR", 
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 1.2)
-              ),
-              Text(widget.machineId, 
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)
-              ),
-            ],
-          ),
-          centerTitle: true,
-          bottom: TabBar(
-            indicatorColor: Colors.amberAccent,
-            indicatorWeight: 4,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white60,
-            labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
-            tabs: const [
-              Tab(text: "DASHBOARD", icon: Icon(Icons.dashboard_outlined)),
-              Tab(text: "CONTROL", icon: Icon(Icons.settings_input_component)),
-              Tab(text: "ANALYTICS", icon: Icon(Icons.show_chart)),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            // Tab 1: Dashboard (Passes the request up)
-            DashboardScreen(
-              machineId: widget.machineId,
-              onHistoryRequest: _onHistoryRequested, // 👈 Hooked up
-            ),
+          const SizedBox(width: 8), // Small padding from the edge
+        ],
 
-            // Tab 2: Control
-            ControlScreen(machineId: widget.machineId),
-
-            // Tab 3: Graph (Receives the controller)
-            GraphScreen(
-              machineId: widget.machineId,
-              controller: _graphController, // 👈 Hooked up
-            ),
+        bottom: TabBar(
+          controller: _tabController, 
+          indicatorColor: Colors.amberAccent,
+          indicatorWeight: 4,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white60,
+          labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
+          tabs: const [
+            Tab(text: "DASHBOARD", icon: Icon(Icons.dashboard_outlined)),
+            Tab(text: "CONTROL", icon: Icon(Icons.settings_input_component)),
+            Tab(text: "ANALYTICS", icon: Icon(Icons.show_chart)),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          DashboardScreen(
+            machineId: widget.machineId,
+            onHistoryRequest: _onHistoryRequested, 
+          ),
+          ControlScreen(machineId: widget.machineId),
+          GraphScreen(
+            machineId: widget.machineId,
+            controller: _graphController, 
+          ),
+        ],
       ),
     );
   }
