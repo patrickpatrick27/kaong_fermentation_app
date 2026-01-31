@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:google_fonts/google_fonts.dart'; 
+// import 'package:google_fonts/google_fonts.dart'; // Not strictly used here but good to keep if used globally
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'ui/screens/login_screen.dart';
 import 'services/update_service.dart';
+
+// --- SCREENS ---
+import 'ui/screens/login_screen.dart';
+import 'ui/screens/home_tabs_screen.dart'; // 👈 IMPORT THE NEW TAB SCREEN
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +32,14 @@ class KaongBrewingApp extends StatelessWidget {
       title: 'Kaong Wine Monitor',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      
+      // 1️⃣ START HERE: Login Screen wrapped in Update Checker
       home: const UpdateCheckWrapper(child: LoginScreen()),
+
+      // 2️⃣ DEFINED ROUTES: This makes navigation from Login -> Home much cleaner
+      routes: {
+        '/home': (context) => const HomeTabsScreen(machineId: 'machine_001'),
+      },
     );
   }
 }
@@ -52,7 +62,6 @@ class _UpdateCheckWrapperState extends State<UpdateCheckWrapper> {
   void initState() {
     super.initState();
     if (!_hasChecked) {
-      // PostFrameCallback ensures context is valid for showing dialogs
       SchedulerBinding.instance.addPostFrameCallback((_) {
         _checkForUpdates();
       });
@@ -62,18 +71,21 @@ class _UpdateCheckWrapperState extends State<UpdateCheckWrapper> {
   Future<void> _checkForUpdates() async {
     _hasChecked = true;
     final updateService = UpdateService();
-    final downloadUrl = await updateService.checkForUpdate();
-
-    if (downloadUrl != null && mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        // 👇 Use the custom dialog widget here
-        builder: (ctx) => UpdateDialog(
-          downloadUrl: downloadUrl, 
-          updateService: updateService
-        ),
-      );
+    // Wrap in try-catch to prevent crashes if update server is down
+    try {
+      final downloadUrl = await updateService.checkForUpdate();
+      if (downloadUrl != null && mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => UpdateDialog(
+            downloadUrl: downloadUrl, 
+            updateService: updateService
+          ),
+        );
+      }
+    } catch (e) {
+      print("Update check failed (non-critical): $e");
     }
   }
 
@@ -84,7 +96,7 @@ class _UpdateCheckWrapperState extends State<UpdateCheckWrapper> {
 }
 
 // ---------------------------------------------------------
-// 👇 Custom Dialog Widget to handle Progress State
+// Custom Dialog Widget to handle Progress State
 // ---------------------------------------------------------
 class UpdateDialog extends StatefulWidget {
   final String downloadUrl;
@@ -116,7 +128,6 @@ class _UpdateDialogState extends State<UpdateDialog> {
       await widget.updateService.downloadUpdate(
         widget.downloadUrl,
         onProgress: (progress) {
-          // Update the UI as download progresses
           if (mounted) {
             setState(() {
               _progress = progress;
@@ -124,7 +135,6 @@ class _UpdateDialogState extends State<UpdateDialog> {
           }
         },
       );
-      // If successful, the app usually installs/closes here.
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -167,14 +177,11 @@ class _UpdateDialogState extends State<UpdateDialog> {
         ],
       ),
       actions: [
-        // Hide "Later" button while downloading
         if (!_isDownloading)
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Later"),
           ),
-        
-        // Show "Update Now" or "Retry"
         if (!_isDownloading)
           FilledButton(
             onPressed: _startDownload,

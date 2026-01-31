@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// --- IMPORTS ---
 import '../../services/database_service.dart';
 import '../../models/brewing_state.dart';
 import '../widgets/process_timer.dart'; 
-import '../widgets/sensor_card.dart';   
-import 'graph_screen.dart';
+import '../widgets/sensor_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String machineId; 
+  
+  // 1. 🆕 Add the callback definition here
+  final Function(String metricKey) onHistoryRequest; 
 
-  const DashboardScreen({super.key, required this.machineId});
+  const DashboardScreen({
+    super.key, 
+    required this.machineId,
+    required this.onHistoryRequest, // 👈 Required now
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -23,177 +28,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F5FA),
-        appBar: AppBar(
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF4527A0), Color(0xFF7B1FA2)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          title: Column(
-            children: [
-              Text("KAONG MONITOR", 
-                style: GoogleFonts.poppins(
-                  fontSize: 18, 
-                  fontWeight: FontWeight.w600, 
-                  color: Colors.white, 
-                  letterSpacing: 1.2
-                )
-              ),
-              Text(widget.machineId, 
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70)
-              ),
-            ],
-          ),
-          centerTitle: true,
-          elevation: 4,
-          bottom: TabBar(
-            indicatorColor: Colors.amberAccent,
-            indicatorWeight: 4,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white60,
-            labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-            tabs: const [
-              Tab(text: "DASHBOARD", icon: Icon(Icons.dashboard_outlined)),
-              Tab(text: "ANALYTICS", icon: Icon(Icons.show_chart)),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            _buildDashboardTab(),
-            GraphScreen(machineId: widget.machineId), 
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDashboardTab() {
     return StreamBuilder<BrewingState>(
-      stream: _dbService.getBrewingStream(widget.machineId), 
+      stream: _dbService.getBrewingStream(widget.machineId),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return Center(child: Text("Connection Error: ${snapshot.error}"));
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
         final state = snapshot.data!;
-
+        
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 1. STATUS CARD
               _buildStatusCard(state),
               
               const SizedBox(height: 25),
               Text("LIVE SENSORS", 
-                style: GoogleFonts.poppins(
-                  fontSize: 14, 
-                  fontWeight: FontWeight.w600, 
-                  color: Colors.grey[600], 
-                  letterSpacing: 1.0
-                )
+                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600], letterSpacing: 1.0)
               ),
               const SizedBox(height: 15),
               
+              // 2. SENSOR GRID
               GridView.count(
                 shrinkWrap: true,
                 crossAxisCount: 2,
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
-                childAspectRatio: 1.0,
+                childAspectRatio: 1.1, 
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
+                  // TEMPERATURE
                   SensorCard(
                     title: "Temperature", 
                     value: state.temperature.toStringAsFixed(1), 
                     unit: "°C",
                     icon: Icons.thermostat, 
                     color: Colors.orange, 
-                    machineId: widget.machineId,
-                    dbKey: "temperature", 
+                    machineId: widget.machineId, 
+                    dbKey: "temp_primary",
+                    // 2. 🚀 USE THE CALLBACK DIRECTLY
+                    onViewHistory: () => widget.onHistoryRequest('temperature'), 
                   ),
+
+                  // pH LEVEL
                   SensorCard(
                     title: "pH Level", 
                     value: state.phLevel.toStringAsFixed(2), 
-                    unit: "",
+                    unit: "pH",
                     icon: Icons.water_drop, 
                     color: Colors.blue, 
-                    machineId: widget.machineId,
-                    dbKey: "ph_level", 
+                    machineId: widget.machineId, 
+                    dbKey: "ph_level",
+                    onViewHistory: () => widget.onHistoryRequest('ph_level'),
                   ),
+
+                  // GRAVITY
                   SensorCard(
                     title: "Gravity", 
                     value: state.specificGravity.toStringAsFixed(3), 
-                    unit: "",
+                    unit: "SG",
                     icon: Icons.scale, 
                     color: Colors.green, 
-                    machineId: widget.machineId,
-                    dbKey: "specific_gravity", 
+                    machineId: widget.machineId, 
+                    dbKey: "specific_gravity",
+                    onViewHistory: () => widget.onHistoryRequest('specific_gravity'),
                   ),
                   
-                  // --- CLEAN STATUS CARD ---
+                  // SYSTEM ACTIVE CARD
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.purple.withOpacity(0.15), 
-                          blurRadius: 20, 
-                          offset: const Offset(0, 10)
-                        )
+                        BoxShadow(color: Colors.purple.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 8))
                       ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Icon Header (Top Left)
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.science, color: Colors.purple, size: 24),
-                          ),
-                          
-                          // Process Info (Bottom Left)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                state.currentProcess,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16, 
-                                  fontWeight: FontWeight.bold, 
-                                  color: Colors.purple
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Status",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12, 
-                                  color: Colors.grey[600]
-                                ),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.tips_and_updates, size: 30, color: Colors.purple.withOpacity(0.5)),
+                        const SizedBox(height: 8),
+                        Text("System Active", style: GoogleFonts.poppins(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 12)),
+                        Text("Monitoring...", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 10)),
+                      ],
                     ),
                   )
                 ],
@@ -211,24 +129,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4527A0).withOpacity(0.15), 
-            blurRadius: 20, 
-            offset: const Offset(0, 8)
-          )
-        ],
+        boxShadow: [BoxShadow(color: const Color(0xFF4527A0).withOpacity(0.15), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           CircularPercentIndicator(
             radius: 55.0,
             lineWidth: 10.0,
             percent: state.progressPercentage,
-            center: Text(
-              "${(state.progressPercentage * 100).toInt()}%", 
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20, color: const Color(0xFF4527A0))
-            ),
+            center: Text("${(state.progressPercentage * 100).toInt()}%", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20, color: const Color(0xFF4527A0))),
             progressColor: const Color(0xFF4527A0),
             backgroundColor: const Color(0xFFEDE7F6),
             circularStrokeCap: CircularStrokeCap.round,
@@ -239,24 +149,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("REMAINING TIME", 
-                  style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.0)
-                ),
-                const SizedBox(height: 4),
-                LiveActiveTimer(
-                  startTimestamp: state.startTimestamp, 
-                  targetHours: state.targetDurationHours
-                ),
-                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-                  child: Text(
-                    "Target: ${state.targetDurationHours}h", 
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500)
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                  child: Text(state.currentProcess.toUpperCase(), 
+                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange[800], letterSpacing: 0.5)
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text("REMAINING TIME", style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 10, fontWeight: FontWeight.w600)),
+                LiveActiveTimer(startTimestamp: state.startTimestamp, targetHours: state.targetDurationHours),
+                const SizedBox(height: 4),
+                Text("Target: ${state.targetDurationHours}h", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
               ],
             ),
           )

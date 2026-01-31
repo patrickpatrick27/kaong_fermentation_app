@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'dashboard_screen.dart';
+
+// 👇 CHANGED: Import the Tabs Screen instead of Dashboard
+import 'home_tabs_screen.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,17 +24,19 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Check if machine exists in Firebase
       final ref = FirebaseDatabase.instance.ref('machines').child(machineId);
       final snapshot = await ref.get();
 
       if (!mounted) return;
 
       if (snapshot.exists) {
-        // ✅ VALID: Proceed to Dashboard
-        Navigator.push(
+        // ✅ VALID: Proceed to HomeTabsScreen (The Parent of Dashboard/Control/Graph)
+        // We use pushReplacement so the user can't "back" into the login screen
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => DashboardScreen(machineId: machineId),
+            builder: (context) => HomeTabsScreen(machineId: machineId),
           ),
         );
       } else {
@@ -71,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5FA),
       body: Center(
-        child: SingleChildScrollView( // Added to prevent overflow on smaller screens
+        child: SingleChildScrollView( 
           child: Padding(
             padding: const EdgeInsets.all(30.0),
             child: Column(
@@ -114,7 +118,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
                 
-                // --- RESTORED & UPGRADED HINTS ---
                 Text("Quick Fill:", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
                 const SizedBox(height: 8),
                 Wrap(

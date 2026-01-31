@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../screens/history_screen.dart'; 
 
 class SensorCard extends StatelessWidget {
   final String title;
@@ -8,8 +7,12 @@ class SensorCard extends StatelessWidget {
   final String unit;
   final IconData icon;
   final Color color;
+  // NOTE: machineId and dbKey are no longer strictly needed inside the card 
+  // because the Dashboard handles the navigation, but we keep them 
+  // to avoid breaking your existing Dashboard code.
   final String machineId; 
   final String dbKey;     
+  final VoidCallback? onViewHistory; // 👈 The most important part
 
   const SensorCard({
     super.key,
@@ -20,6 +23,7 @@ class SensorCard extends StatelessWidget {
     required this.color,
     required this.machineId,
     required this.dbKey,
+    this.onViewHistory,
   });
 
   @override
@@ -27,85 +31,99 @@ class SensorCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => 
-              HistoryScreen(
-                machineId: machineId, 
-                sensorName: title, 
-                sensorKey: dbKey, 
-                unit: unit, 
-                themeColor: color
-              )
-            ));
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Padding(
+        padding: const EdgeInsets.all(12), // Compact Padding
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // 1. Header (Icon + Title)
+            Row(
               children: [
-                // Icon Header
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 18),
                 ),
-                
-                // Value and Title
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          value,
-                          style: GoogleFonts.poppins(
-                            fontSize: 22, 
-                            fontWeight: FontWeight.bold, 
-                            color: color
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          unit,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14, 
-                            color: Colors.grey
-                          ),
-                        ),
-                      ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12, 
-                        color: Colors.grey[600]
-                      ),
-                    ),
-                  ],
-                )
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
-          ),
+            
+            // 2. Value (Big & Colored)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold, 
+                    color: color,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  unit,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: color.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+
+            // 3. Action Button (Triggers the Dashboard Logic)
+            SizedBox(
+              width: double.infinity,
+              height: 28,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color.withOpacity(0.1),
+                  foregroundColor: color,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: onViewHistory, // 👈 Triggers _jumpToAnalytics
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("View Analytics", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_forward_rounded, size: 12, color: color),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
